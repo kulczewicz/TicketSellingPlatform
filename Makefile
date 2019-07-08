@@ -1,5 +1,5 @@
 all:
-	@psql -c "CREATE ROLE ticketadmin WITH LOGIN PASSWORD 'TicketPlatform';"
+	@psql -c "CREATE ROLE ticketadmin WITH LOGIN PASSWORD 'TicketPlatform1234';"
 	@psql -c "ALTER ROLE ticketadmin CREATEDB;"
 	@psql -c "CREATE DATABASE ticketapi;" -U ticketadmin postgres
 	@psql -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" ticketapi
