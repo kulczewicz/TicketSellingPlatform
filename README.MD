@@ -1,11 +1,18 @@
 # Ticket Selling Platform
-First of all, you need to create test user, create database and fill it with data, in order to do that please type
+This is a simple ticket selling platform API, written in node.js with express and typescript, using PostgreSQL database.
+Please ensure you have installed relatively new node.js, npm and Postgres.
+
+First of all, you need to create test user, create database and fill it with data, in order to do that please type:
 ```sh
 make
 ```
-to drop database and delete user, type
+to drop database and delete user, type:
 ```sh
 make clean
+```
+To install all the packages, run:
+```sh
+npm install
 ```
 To start the development environment:
 ```sh
