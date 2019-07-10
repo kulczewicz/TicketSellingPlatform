@@ -14,12 +14,3 @@ export enum ErrorMessage {
     eventNotExist = "Event does not exist",
     eventNotFound = "Event not found"
 }
-
-export enum Roots {
-    getEvent = ".*",
-    availableTickets = ".*\/available-tickets$",
-    purchase = ".*\/purchase$",
-    filterGetEvent = "\/",
-    filterAvailableTickets = "available-tickets|\/",
-    filterPurchase = "purchase|\/"
-}

@@ -1,12 +1,12 @@
 import express from "express";
-import { pool } from "./databaseConnector";
+import { pg } from "./pg";
 import { QueryResult } from 'pg';
-import { Status, ErrorMessage, Roots } from "./enums";
+import { Status, ErrorMessage } from "./enums";
 
 abstract class AbstractController {
     askDatabase(arg: any[], query: string) {
         return new Promise((resolve, reject) => {
-            pool.query(query, arg, (error: Error, results: QueryResult) => {
+            pg.query(query, arg, (error: Error, results: QueryResult) => {
                 if (error)
                     throw error;
                 else if (results.rows.length === 0)
@@ -50,7 +50,7 @@ export class PaymentController extends AbstractController {
         return true;
     }
     purchase(request: express.Request, response: express.Response): void {
-        const url: string = request.originalUrl.replace(new RegExp(Roots.filterPurchase, 'g'), '');
+        const url: string = request.params.event;
         const body = {} as RequestBody;
         if(this.checkRequestBody(request, response, body)) {
             const query = "SELECT url FROM event WHERE url = $1";
@@ -62,7 +62,7 @@ export class PaymentController extends AbstractController {
                     const ticket: Ticket = <Ticket>resolve;
                     this.charge(body.amount, body.token).then(() => {
                         const query = "UPDATE ticket SET available = FALSE WHERE id = $1";
-                        pool.query(query, [ticket.ticketid], (error: Error, results: QueryResult) => {
+                        pg.query(query, [ticket.ticketid], (error: Error, results: QueryResult) => {
                             if (error)
                                 throw error;
                             response.status(Status.OK).json(ticket);
@@ -86,7 +86,7 @@ export class EventController extends AbstractController {
         this.getEvent = this.getEvent.bind(this);
     }
     getEvent(request: express.Request, response: express.Response): void {
-        const url: string = request.originalUrl.replace(new RegExp(Roots.filterGetEvent, 'g'), '');
+        const url: string = request.params.event;
         const query: string = "SELECT name, timestamp FROM event WHERE url = $1;";
         this.askDatabase([url], query).then((resolve) => {
             response.status(Status.OK).json(<Event>resolve);
@@ -102,7 +102,7 @@ export class TicketController extends AbstractController {
         this.getAvailableTicketsForEvent = this.getAvailableTicketsForEvent.bind(this);
     }
     getAvailableTicketsForEvent(request: express.Request, response: express.Response): void {
-        const url: string = request.originalUrl.replace(new RegExp(Roots.filterAvailableTickets, 'g'), '');
+        const url: string = request.params.event;
         const query: string = `SELECT count(t.id) AS available 
                             FROM ticket t JOIN event e ON (t.eventurl = e.url) 
                             WHERE t.available AND e.url = $1

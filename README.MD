@@ -53,7 +53,7 @@ App is divided into several files:
 - controllers.ts - contains AbstractController class and three classes, corresponding with three endpoints, which inherit after that one abstract class
 - module.d.ts - definitions of types
 - enums.ts - enums, used in app.ts and controller.ts
-- databaseConnector.ts - module, where Pool object is created, which is used in controllers.ts to connect with database
+- pg.ts - module, where pg:Pool object is created, which is used in controllers.ts to connect with database
 
 ## controllers.ts classes
 ### AbstractController:
