@@ -71,7 +71,7 @@ In every case we need only first row:
 #### charge
 Provided payment adapter, which "charges" account, accepting every token, except 'card_error' and 'payment_error'. Is used in purchase method of the same class.
 #### checkRequestBody
-Checks, if request format is correct. If request body and token and amount are not empty, returns requestBody object, otherwise sends a Bad Request (400) response. Is used in purchase method of the same class.
+Checks, if request format is correct. Returns ResolveReject object, if request body and token and amount are not empty, status is 200, otherwise status is 400 and according error message is added. Is used in purchase method of the same class.
 #### purchase
 Endpoint, responsible for purchasing the ticket. Checks, if there are available tickets for that event with provided price. If yes, checks, if there are available tickets for that event with that price - we suppose that there could be tickets with different prices. If there are - charges the account, returns first in row (ticketid is a unique uuid identifier):
 ```sh

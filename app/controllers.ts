@@ -2,16 +2,17 @@ import express from "express";
 import { pg } from "./pg";
 import { QueryResult } from 'pg';
 import { Status, ErrorMessage } from "./enums";
+import { ResolveReject } from "./module"
 
 abstract class AbstractController {
-    askDatabase(arg: any[], query: string) {
+    askDatabase(arg: any[], query: string, errorObj: ResolveReject): Promise<ResolveReject> {
         return new Promise((resolve, reject) => {
-            pg.query(query, arg, (error: Error, results: QueryResult) => {
-                if (error)
-                    throw error;
+            pg.query(query, arg, (databaseError: Error, results: QueryResult) => {
+                if (databaseError)
+                    return reject({status: Status.SERVERERROR, error: databaseError});
                 else if (results.rows.length === 0)
-                    reject({error: ErrorMessage.notFound});
-                resolve(results.rows[0]);
+                    return reject(errorObj);
+                return resolve({status: Status.OK , data: results.rows[0]});
             })
         })
     }
@@ -34,48 +35,48 @@ export class PaymentController extends AbstractController {
             }
         })
     }
-    checkRequestBody(request: express.Request, response: express.Response, body: RequestBody): boolean {
+    checkRequestBody(request: express.Request): ResolveReject {
         if (!request.body)  {
-            response.status(Status.BADREQUEST).json({error: ErrorMessage.emptyBody});
-            return false;
+            return { status: Status.BADREQUEST, error: ErrorMessage.emptyBody };
         } else if (!request.body.token || !request.body.amount) {
-            response.status(Status.BADREQUEST).json({error: ErrorMessage.emptyTokenAmount});
-            return false;
+            return { status: Status.BADREQUEST, error: ErrorMessage.emptyTokenAmount };
         } else if (typeof request.body.amount !== "number") {
-            response.status(Status.BADREQUEST).json({error: ErrorMessage.amountNotANumber});
-            throw ErrorMessage.amountNotANumber;
+            return { status: Status.BADREQUEST, error: ErrorMessage.amountNotANumber };
         }
-        body.token = request.body.token;
-        body.amount = request.body.amount;
-        return true;
+        return { status: Status.OK };
     }
-    purchase(request: express.Request, response: express.Response): void {
+    purchase(request: express.Request, response: express.Response) {
         const url: string = request.params.event;
-        const body = {} as RequestBody;
-        if(this.checkRequestBody(request, response, body)) {
-            const query = "SELECT url FROM event WHERE url = $1";
-            this.askDatabase([url], query).then(() => {
+        const check: ResolveReject = this.checkRequestBody(request);
+        if(check.status === Status.OK) {
+            const query: string = "SELECT url FROM event WHERE url = $1";
+            const error: ResolveReject = { status: Status.NOTFOUND, error: ErrorMessage.eventNotExist };
+            this.askDatabase([url], query, error).then(() => {
                 const query: string = `SELECT t.id as ticketid, t.price
                                     FROM ticket t JOIN event e ON (t.eventurl = e.url) 
                                     WHERE t.available AND e.url = $1 AND t.price = $2;`;
-                this.askDatabase([url, body.amount], query).then((resolve) => {
-                    const ticket: Ticket = <Ticket>resolve;
-                    this.charge(body.amount, body.token).then(() => {
+                const error: ResolveReject = { status: Status.NOTFOUND, error: ErrorMessage.outOfTickets };
+                this.askDatabase([url, request.body.amount], query, error).then((resolve) => {
+                    this.charge(request.body.amount, request.body.token).then(() => {
                         const query = "UPDATE ticket SET available = FALSE WHERE id = $1";
-                        pg.query(query, [ticket.ticketid], (error: Error, results: QueryResult) => {
-                            if (error)
-                                throw error;
-                            response.status(Status.OK).json(ticket);
+                        pg.query(query, [resolve.data.ticketid], (datatbaseError: Error) => {
+                            if (datatbaseError)
+                                return response.status(Status.SERVERERROR).json({error: datatbaseError});
+                            return response.status(resolve.status).json(resolve.data);
                         })
                     }).catch((promiseError) => {
-                        response.status(Status.UNAUTHORIZED).json({error: promiseError.message});
+                        return response.status(Status.UNAUTHORIZED).json({
+                            error: promiseError.message
+                        });
                     })
-                }).catch(() => {
-                    response.status(Status.NOTFOUND).json({error: ErrorMessage.outOfTickets});
+                }).catch((errorObj) => {
+                    return response.status(error.status).json({error: errorObj.error});
                 });
-            }).catch(() => {
-                response.status(Status.NOTFOUND).json({error: ErrorMessage.eventNotExist});
+            }).catch((errorObj) => {
+                return response.status(error.status).json({error: errorObj.error});
             })
+        } else {
+            return response.status(check.status).json({error: check.error});
         }
     }
 }
@@ -88,10 +89,11 @@ export class EventController extends AbstractController {
     getEvent(request: express.Request, response: express.Response): void {
         const url: string = request.params.event;
         const query: string = "SELECT name, timestamp FROM event WHERE url = $1;";
-        this.askDatabase([url], query).then((resolve) => {
-            response.status(Status.OK).json(<Event>resolve);
-        }).catch(() => {
-            response.status(Status.NOTFOUND).json({error: ErrorMessage.eventNotFound});
+        const error: ResolveReject = { status: Status.NOTFOUND, error: ErrorMessage.eventNotFound };
+        this.askDatabase([url], query, error).then((resolve) => {
+            return response.status(resolve.status).json(resolve.data);
+        }).catch((errorObj) => {
+            return response.status(errorObj.status).json({error: errorObj.error});
         });
     }
 }
@@ -107,10 +109,11 @@ export class TicketController extends AbstractController {
                             FROM ticket t JOIN event e ON (t.eventurl = e.url) 
                             WHERE t.available AND e.url = $1
                             GROUP BY available;`;
-        this.askDatabase([url], query).then((resolve) => {
-            response.status(Status.OK).json(<Available>resolve);
-        }).catch(() => {
-            response.status(Status.NOTFOUND).json({error: ErrorMessage.eventNotFound});
+        const error: ResolveReject = { status: Status.NOTFOUND, error: ErrorMessage.eventNotFound };
+        this.askDatabase([url], query, error).then((resolve) => {
+            return response.status(resolve.status).json(resolve.data);
+        }).catch((errorObj) => {
+            return response.status(errorObj.status).json({error: errorObj.error});
         });
     }
 }

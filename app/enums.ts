@@ -2,7 +2,8 @@ export enum Status {
     OK = 200,
     BADREQUEST = 400,
     UNAUTHORIZED = 401,
-    NOTFOUND = 404
+    NOTFOUND = 404,
+    SERVERERROR = 500
 }
 
 export enum ErrorMessage {
@@ -12,5 +13,6 @@ export enum ErrorMessage {
     amountNotANumber = "Amount is not a number",
     outOfTickets = "Out of tickets for that event in that price",
     eventNotExist = "Event does not exist",
-    eventNotFound = "Event not found"
+    eventNotFound = "Event not found",
+    serverError = "Internal Server Error"
 }

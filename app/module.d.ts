@@ -1,18 +1,7 @@
-interface Ticket {
-    ticketid: string;
-    price: number;
-}
+import { Status, ErrorMessage } from "./enums";
 
-interface Event {
-    name: string;
-    timestamp: Date;
-}
-
-interface RequestBody {
-    token: string;
-    amount: number;
-}
-
-interface Available {
-    available: number;
+interface ResolveReject {
+    status: Status;
+    data?: any;
+    error?: ErrorMessage | Error;
 }
